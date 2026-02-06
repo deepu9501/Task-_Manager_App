@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiMail, FiCalendar, FiSettings, FiLogOut, FiEdit2 } from 'react-icons/fi';
+import { FiUser, FiMail, FiCalendar, FiSettings, FiLogOut, FiEdit2, FiArrowLeft, FiX } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
+import ApiService from '../services/apiService';
 
 const Profile = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState(null);
+    const { user, logout } = useAuth();
+    const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         bio: ''
     });
+    const [updateLoading, setUpdateLoading] = useState(false);
+
+    const handleBack = () => {
+        navigate(-1);
+    };
 
     useEffect(() => {
         fetchUserProfile();
@@ -19,27 +28,51 @@ const Profile = () => {
 
     const fetchUserProfile = async () => {
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            setLoading(true);
+            setError(null);
             
-            const mockUser = {
-                name: 'Deepak Kumar',
-                email: 'deepak@example.com',
-                bio: 'Full-stack developer passionate about building efficient task management solutions.',
-                joinDate: '2024-01-15',
-                avatar: 'DK'
-            };
+            // Fetch real user data from API
+            const userData = await ApiService.getCurrentUser();
+            setProfileData(userData);
             
-            setUser(mockUser);
             setFormData({
-                name: mockUser.name,
-                email: mockUser.email,
-                bio: mockUser.bio
+                name: userData.name || '',
+                email: userData.email || '',
+                bio: userData.bio || ''
             });
+            
         } catch (error) {
             console.error('Failed to fetch user profile:', error);
+            setError('Failed to load profile. Please check your connection.');
+            
+            // Use context user data as fallback
+            if (user) {
+                setProfileData(user);
+                setFormData({
+                    name: user.name || '',
+                    email: user.email || '',
+                    bio: user.bio || ''
+                });
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        try {
+            setUpdateLoading(true);
+            
+            // Update user profile via API
+            const updatedData = await ApiService.updateProfile(formData);
+            setProfileData(updatedData);
+            setEditing(false);
+            
+        } catch (error) {
+            console.error('Failed to update profile:', error);
+            setError('Failed to update profile. Please try again.');
+        } finally {
+            setUpdateLoading(false);
         }
     };
 
@@ -49,29 +82,26 @@ const Profile = () => {
 
     const handleCancel = () => {
         setEditing(false);
-        setFormData({
-            name: user.name,
-            email: user.email,
-            bio: user.bio
-        });
-    };
-
-    const handleSave = async () => {
-        try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            setUser({ ...user, ...formData });
-            setEditing(false);
-        } catch (error) {
-            console.error('Failed to update profile:', error);
+        if (profileData) {
+            setFormData({
+                name: profileData.name || '',
+                email: profileData.email || '',
+                bio: profileData.bio || ''
+            });
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Fallback logout
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            navigate('/login');
+        }
     };
 
     if (loading) {
@@ -87,7 +117,18 @@ const Profile = () => {
             {/* Header */}
             <header className="bg-white border-b border-gray-200 px-8 py-4">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold text-gray-900">Profile</h1>
+                    <div className="flex items-center gap-4">
+                        {/* Back Button */}
+                        <button
+                            onClick={handleBack}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                            aria-label="Go back to dashboard"
+                        >
+                            <FiArrowLeft className="w-4 h-4" />
+                            <span>Back</span>
+                        </button>
+                        <h1 className="text-2xl font-semibold text-gray-900">Profile</h1>
+                    </div>
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -106,12 +147,19 @@ const Profile = () => {
                         <div className="bg-white rounded-xl shadow-lg p-6">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-semibold text-gray-900">Profile Information</h2>
-                                {!editing && (
+                                {!editing ? (
+                                    <button
+                                        onClick={handleEdit}
+                                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                                    >
+                                        <FiEdit2 className="w-5 h-5" />
+                                    </button>
+                                ) : (
                                     <button
                                         onClick={handleCancel}
                                         className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                                     >
-                                        <FiEdit2 className="w-5 h-5" />
+                                        <FiX className="w-5 h-5" />
                                     </button>
                                 )}
                             </div>

@@ -4,6 +4,8 @@ import Tasks from './pages/Tasks';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import Analytics from './pages/Analytics';
+import Calendar from './pages/Calendar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -63,6 +65,22 @@ function App() {
                                 element={
                                     <ProtectedRoute>
                                         <Tasks />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/calendar"
+                                element={
+                                    <ProtectedRoute>
+                                        <Calendar />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/analytics"
+                                element={
+                                    <ProtectedRoute>
+                                        <Analytics />
                                     </ProtectedRoute>
                                 }
                             />

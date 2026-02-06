@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiList, FiSearch, FiFilter, FiCalendar, FiX, FiCheck, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiPlus, FiList, FiSearch, FiFilter, FiCalendar, FiX, FiCheck, FiEdit2, FiTrash2, FiArrowLeft } from 'react-icons/fi';
+import ApiService from '../services/apiService';
 
 const Tasks = () => {
     const navigate = useNavigate();
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [showModal, setShowModal] = useState(false);
@@ -18,80 +20,152 @@ const Tasks = () => {
         dueDate: ''
     });
 
+    const handleBack = () => {
+        navigate(-1);
+    };
+
     useEffect(() => {
         fetchTasks();
     }, []);
 
     const fetchTasks = async () => {
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            setLoading(true);
+            setError(null);
             
-            const mockTasks = [
-                { _id: '1', title: 'Complete project documentation', description: 'Write comprehensive documentation for the new feature', priority: 'High', category: 'Work', isCompleted: false, dueDate: '2024-02-10' },
-                { _id: '2', title: 'Review pull requests', description: 'Review and merge pending pull requests', priority: 'Medium', category: 'Development', isCompleted: true, dueDate: '2024-02-08' },
-                { _id: '3', title: 'Team meeting preparation', description: 'Prepare slides for weekly team sync', priority: 'High', category: 'Meetings', isCompleted: false, dueDate: '2024-02-09' },
-                { _id: '4', title: 'Code review for feature branch', description: 'Review code changes in feature/authentication branch', priority: 'Medium', category: 'Development', isCompleted: false, dueDate: '2024-02-11' },
-                { _id: '5', title: 'Update dependencies', description: 'Update all npm packages to latest versions', priority: 'Low', category: 'Development', isCompleted: true, dueDate: '2024-02-07' }
-            ];
+            // Fetch real tasks from API
+            const data = await ApiService.getTasks();
+            setTasks(Array.isArray(data) ? data : []);
             
-            setTasks(mockTasks);
         } catch (error) {
             console.error('Failed to fetch tasks:', error);
+            setError('Failed to load tasks. Please check your connection.');
+            setTasks([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const filteredTasks = tasks.filter(task => {
-        const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             task.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const filteredTasks = tasks && Array.isArray(tasks) ? tasks.filter(task => {
+        if (!task || typeof task !== 'object') return false;
+        
+        const matchesSearch = (task.title && task.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                             (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesFilter = filterStatus === 'all' ||
                              (filterStatus === 'completed' && task.isCompleted) ||
                              (filterStatus === 'pending' && !task.isCompleted);
         return matchesSearch && matchesFilter;
-    });
+    }) : [];
 
-    const handleCreateTask = () => {
+    const handleCreateTask = async () => {
         if (newTask.title.trim()) {
-            const task = {
-                ...newTask,
-                _id: Date.now().toString(),
-                isCompleted: false
-            };
-            
-            if (editingTask) {
-                setTasks(tasks.map(t => t._id === editingTask._id ? { ...task, _id: editingTask._id } : t));
-            } else {
-                setTasks([task, ...tasks]);
+            try {
+                setLoading(true);
+                
+                const taskData = {
+                    ...newTask,
+                    isCompleted: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                // Create task via API
+                const createdTask = await ApiService.createTask(taskData);
+                setTasks([createdTask, ...tasks]);
+                
+                // Clear form and close modal
+                setNewTask({ title: '', description: '', priority: 'Medium', category: 'Work', dueDate: '' });
+                setEditingTask(null);
+                setShowModal(false);
+                
+                // Refresh dashboard data to show new task
+                if (window.location.pathname === '/tasks') {
+                    // Trigger a custom event to notify dashboard
+                    window.dispatchEvent(new CustomEvent('taskCreated', { detail: createdTask }));
+                }
+                
+            } catch (error) {
+                console.error('Failed to create task:', error);
+                setError('Failed to create task. Please try again.');
+            } finally {
+                setLoading(false);
             }
-            
-            setNewTask({ title: '', description: '', priority: 'Medium', category: 'Work', dueDate: '' });
-            setEditingTask(null);
-            setShowModal(false);
         }
     };
 
-    const handleEditTask = (task) => {
-        setEditingTask(task);
-        setNewTask({
-            title: task.title,
-            description: task.description,
-            priority: task.priority,
-            category: task.category,
-            dueDate: task.dueDate
-        });
-        setShowModal(true);
+    const handleEditTask = async (task) => {
+        try {
+            setEditingTask(task);
+            setNewTask({
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
+                category: task.category,
+                dueDate: task.dueDate
+            });
+            setShowModal(true);
+        } catch (error) {
+            console.error('Failed to edit task:', error);
+            setError('Failed to edit task. Please try again.');
+        }
     };
 
-    const handleDeleteTask = (taskId) => {
-        setTasks(tasks.filter(t => t._id !== taskId));
+    const handleUpdateTask = async () => {
+        if (editingTask && newTask.title.trim()) {
+            try {
+                setLoading(true);
+                
+                // Update task via API
+                const updatedTask = await ApiService.updateTask(editingTask._id, newTask);
+                setTasks(tasks.map(t => t._id === editingTask._id ? updatedTask : t));
+                
+                setNewTask({ title: '', description: '', priority: 'Medium', category: 'Work', dueDate: '' });
+                setEditingTask(null);
+                setShowModal(false);
+                
+                // Notify dashboard of task update
+                window.dispatchEvent(new CustomEvent('taskUpdated', { detail: updatedTask }));
+                
+            } catch (error) {
+                console.error('Failed to update task:', error);
+                setError('Failed to update task. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        }
     };
 
-    const handleToggleComplete = (taskId) => {
-        setTasks(tasks.map(t => 
-            t._id === taskId ? { ...t, isCompleted: !t.isCompleted } : t
-        ));
+    const handleDeleteTask = async (taskId) => {
+        try {
+            // Delete task via API
+            await ApiService.deleteTask(taskId);
+            setTasks(tasks.filter(t => t._id !== taskId));
+            
+            // Notify dashboard of task deletion
+            window.dispatchEvent(new CustomEvent('taskDeleted', { detail: { taskId } }));
+            
+        } catch (error) {
+            console.error('Failed to delete task:', error);
+            setError('Failed to delete task. Please try again.');
+        }
+    };
+
+    const handleToggleComplete = async (taskId) => {
+        try {
+            const task = tasks.find(t => t._id === taskId);
+            if (task) {
+                // Update task via API
+                const updatedTask = await ApiService.updateTask(taskId, {
+                    isCompleted: !task.isCompleted
+                });
+                setTasks(tasks.map(t => t._id === taskId ? updatedTask : t));
+                
+                // Notify dashboard of task completion change
+                window.dispatchEvent(new CustomEvent('taskToggled', { detail: updatedTask }));
+            }
+        } catch (error) {
+            console.error('Failed to toggle task completion:', error);
+            setError('Failed to update task. Please try again.');
+        }
     };
 
     if (loading) {
@@ -108,6 +182,15 @@ const Tasks = () => {
             <header className="bg-white border-b border-gray-200 px-8 py-4">
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
+                        {/* Back Button */}
+                        <button
+                            onClick={handleBack}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                            aria-label="Go back to dashboard"
+                        >
+                            <FiArrowLeft className="w-4 h-4" />
+                            <span>Back</span>
+                        </button>
                         <h1 className="text-2xl font-semibold text-gray-900">Tasks</h1>
                         <div className="relative">
                             <FiSearch className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
@@ -116,7 +199,7 @@ const Tasks = () => {
                                 placeholder="Search tasks..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                                className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
                             />
                         </div>
                     </div>
@@ -145,9 +228,12 @@ const Tasks = () => {
             <main className="max-w-6xl mx-auto px-8 py-6">
                 {filteredTasks.length > 0 ? (
                     <div className="grid gap-4">
-                        {filteredTasks.map((task) => (
+                        {filteredTasks.map((task) => {
+                            if (!task || typeof task !== 'object') return null;
+                            
+                            return (
                             <div
-                                key={task._id}
+                                key={task._id || Math.random()}
                                 className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                             >
                                 <div className="flex items-start justify-between">
@@ -168,19 +254,19 @@ const Tasks = () => {
                                             <h3 className={`font-medium text-gray-900 ${
                                                 task.isCompleted ? 'line-through text-gray-500' : ''
                                             }`}>
-                                                {task.title}
+                                                {task.title || 'Untitled Task'}
                                             </h3>
-                                            <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                                            <p className="text-sm text-gray-600 mt-1">{task.description || 'No description available'}</p>
                                             <div className="flex items-center gap-3 mt-3">
                                                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                                     task.priority === 'High' ? 'bg-red-100 text-red-700' :
                                                     task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
                                                     'bg-green-100 text-green-700'
                                                 }`}>
-                                                    {task.priority}
+                                                    {task.priority || 'Medium'}
                                                 </span>
                                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                                    {task.category}
+                                                    {task.category || 'General'}
                                                 </span>
                                                 {task.dueDate && (
                                                     <span className="text-xs text-gray-500 flex items-center gap-1">
@@ -194,20 +280,23 @@ const Tasks = () => {
                                     <div className="flex items-center gap-2 ml-4">
                                         <button
                                             onClick={() => handleEditTask(task)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                                            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                                            aria-label="Edit task"
                                         >
                                             <FiEdit2 className="w-4 h-4" />
                                         </button>
                                         <button
                                             onClick={() => handleDeleteTask(task._id)}
                                             className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                            aria-label="Delete task"
                                         >
                                             <FiTrash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="text-center py-16">

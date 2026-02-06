@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, Leaf, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Leaf } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const Login = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleBack = () => {
+        navigate(-1);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setError('');
 
         const formData = new FormData(e.currentTarget);
         const email = formData.get('email');
@@ -20,12 +25,10 @@ const Login = () => {
 
         try {
             await login(email, password);
-            toast.success('Welcome back!');
             navigate('/dashboard');
         } catch (error) {
             console.error('Login error:', error);
-            const errorMessage = error.response?.data?.message || 'Invalid email or password';
-            toast.error(errorMessage);
+            setError(error.message || 'Invalid email or password');
         } finally {
             setLoading(false);
         }
@@ -329,6 +332,16 @@ const Login = () => {
             `}</style>
 
             <div className="organic-card">
+                {/* Back Button */}
+                <button
+                    onClick={handleBack}
+                    className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors z-20"
+                    aria-label="Go back"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                </button>
+                
                 <Leaf className="organic-leaf-icon" strokeWidth={1.5} />
                 
                 <h1 className="organic-title">Welcome back</h1>
