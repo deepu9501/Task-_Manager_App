@@ -1,14 +1,14 @@
+
 import axios from 'axios';
 
-// Create axios instance
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Request interceptor to add auth token
+// Add a request interceptor
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -22,13 +22,16 @@ api.interceptors.request.use(
     }
 );
 
-// Response interceptor for error handling
+// Add a response interceptor
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
+        if (error.response && error.response.status === 401) {
+            // Unauthenticated - clear storage
             localStorage.removeItem('token');
-            window.location.href = '/login';
+            localStorage.removeItem('user');
+            // Optional: Redirect to login or trigger global auth state update
+            // window.location.href = '/login'; 
         }
         return Promise.reject(error);
     }

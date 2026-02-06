@@ -129,6 +129,13 @@ JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRE=7d
 ```
 
+Or copy from example:
+```bash
+copy .env.example .env
+```
+
+Then edit `.env` with your actual credentials.
+
 4. Start the server:
 ```bash
 npm run dev
@@ -148,7 +155,17 @@ cd frontend
 npm install
 ```
 
-3. Start the development server:
+3. Create `.env` file (optional - defaults to localhost):
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+Or copy from example:
+```bash
+copy .env.example .env
+```
+
+4. Start the development server:
 ```bash
 npm run dev
 ```

@@ -1,159 +1,403 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Eye, EyeOff, Leaf } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineClipboardList } from 'react-icons/hi';
 
 const Login = () => {
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-    });
-    const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState({});
-
-    const { login } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
-
-    const from = location.state?.from?.pathname || '/dashboard';
-
-    const validateForm = () => {
-        const newErrors = {};
-
-        if (!formData.email) {
-            newErrors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Please enter a valid email';
-        }
-
-        if (!formData.password) {
-            newErrors.password = 'Password is required';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: '' }));
-        }
-    };
+    const { login } = useAuth();
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!validateForm()) return;
-
         setLoading(true);
+
+        const formData = new FormData(e.currentTarget);
+        const email = formData.get('email');
+        const password = formData.get('password');
+
         try {
-            await login(formData);
+            await login(email, password);
             toast.success('Welcome back!');
-            navigate(from, { replace: true });
+            navigate('/dashboard');
         } catch (error) {
-            const message = error.response?.data?.message || 'Login failed. Please try again.';
-            toast.error(message);
+            console.error('Login error:', error);
+            const errorMessage = error.response?.data?.message || 'Invalid email or password';
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 px-4">
-            <div className="max-w-md w-full">
-                {/* Logo */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 shadow-lg shadow-indigo-500/30">
-                        <HiOutlineClipboardList className="w-8 h-8 text-white" />
+        <div className="organic-login-container">
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+                
+                .organic-login-container {
+                    min-height: 100vh;
+                    background: linear-gradient(135deg, #f5f3ef 0%, #e8e4dc 50%, #d4cfc4 100%);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 2rem;
+                    position: relative;
+                    overflow: hidden;
+                    font-family: 'Lora', serif;
+                }
+                
+                .organic-login-container::before {
+                    content: '';
+                    position: absolute;
+                    top: -50%;
+                    right: -20%;
+                    width: 80%;
+                    height: 120%;
+                    background: radial-gradient(ellipse at center, rgba(139, 115, 85, 0.08) 0%, transparent 70%);
+                    border-radius: 50% 40% 60% 50%;
+                    animation: breathe 8s ease-in-out infinite;
+                }
+                
+                .organic-login-container::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -30%;
+                    left: -15%;
+                    width: 60%;
+                    height: 80%;
+                    background: radial-gradient(ellipse at center, rgba(106, 124, 94, 0.06) 0%, transparent 70%);
+                    border-radius: 60% 50% 40% 60%;
+                    animation: breathe 10s ease-in-out infinite reverse;
+                }
+                
+                @keyframes breathe {
+                    0%, 100% { transform: scale(1) rotate(0deg); }
+                    50% { transform: scale(1.1) rotate(5deg); }
+                }
+                
+                @keyframes float {
+                    0%, 100% { transform: translateY(0px) rotate(0deg); }
+                    50% { transform: translateY(-20px) rotate(5deg); }
+                }
+                
+                @keyframes fadeInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(30px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                
+                .organic-card {
+                    position: relative;
+                    z-index: 10;
+                    background: rgba(255, 255, 255, 0.85);
+                    backdrop-filter: blur(20px);
+                    border-radius: 40px;
+                    padding: 3.5rem 3rem;
+                    max-width: 480px;
+                    width: 100%;
+                    box-shadow: 
+                        0 20px 60px rgba(139, 115, 85, 0.15),
+                        0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+                    animation: fadeInUp 0.8s ease-out;
+                }
+                
+                .organic-leaf-icon {
+                    width: 48px;
+                    height: 48px;
+                    color: #6a7c5e;
+                    margin: 0 auto 1.5rem;
+                    display: block;
+                    animation: float 4s ease-in-out infinite;
+                }
+                
+                .organic-title {
+                    font-family: 'Crimson Pro', serif;
+                    font-size: 2.5rem;
+                    font-weight: 300;
+                    color: #3d3d3d;
+                    text-align: center;
+                    margin-bottom: 0.5rem;
+                    letter-spacing: -0.02em;
+                }
+                
+                .organic-subtitle {
+                    font-size: 0.95rem;
+                    color: #7a7a7a;
+                    text-align: center;
+                    margin-bottom: 2.5rem;
+                    font-style: italic;
+                }
+                
+                .organic-form-group {
+                    margin-bottom: 1.75rem;
+                }
+                
+                .organic-label {
+                    display: block;
+                    font-size: 0.875rem;
+                    color: #5a5a5a;
+                    margin-bottom: 0.5rem;
+                    font-weight: 400;
+                    letter-spacing: 0.02em;
+                }
+                
+                .organic-input-wrapper {
+                    position: relative;
+                    background: rgba(255, 255, 255, 0.6);
+                    border: 1.5px solid rgba(139, 115, 85, 0.2);
+                    border-radius: 20px;
+                    transition: all 0.3s ease;
+                }
+                
+                .organic-input-wrapper:focus-within {
+                    border-color: #8b7355;
+                    background: rgba(255, 255, 255, 0.9);
+                    box-shadow: 0 4px 20px rgba(139, 115, 85, 0.1);
+                }
+                
+                .organic-input {
+                    width: 100%;
+                    padding: 1rem 1.25rem;
+                    background: transparent;
+                    border: none;
+                    outline: none;
+                    font-size: 0.95rem;
+                    color: #3d3d3d;
+                    font-family: 'Lora', serif;
+                }
+                
+                .organic-input::placeholder {
+                    color: #a0a0a0;
+                    font-style: italic;
+                }
+                
+                .organic-eye-button {
+                    position: absolute;
+                    right: 1rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: #8b7355;
+                    transition: color 0.3s ease;
+                }
+                
+                .organic-eye-button:hover {
+                    color: #6a5a45;
+                }
+                
+                .organic-remember-row {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 2rem;
+                    font-size: 0.875rem;
+                }
+                
+                .organic-checkbox-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    color: #5a5a5a;
+                    cursor: pointer;
+                }
+                
+                .organic-checkbox {
+                    width: 18px;
+                    height: 18px;
+                    border: 1.5px solid #8b7355;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    accent-color: #6a7c5e;
+                }
+                
+                .organic-link {
+                    color: #6a7c5e;
+                    text-decoration: none;
+                    transition: color 0.3s ease;
+                    font-style: italic;
+                }
+                
+                .organic-link:hover {
+                    color: #4a5c3e;
+                    text-decoration: underline;
+                }
+                
+                .organic-button {
+                    width: 100%;
+                    padding: 1.1rem;
+                    background: linear-gradient(135deg, #6a7c5e 0%, #8b9d7f 100%);
+                    border: none;
+                    border-radius: 20px;
+                    color: white;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 8px 24px rgba(106, 124, 94, 0.25);
+                    font-family: 'Lora', serif;
+                    letter-spacing: 0.03em;
+                }
+                
+                .organic-button:hover:not(:disabled) {
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 32px rgba(106, 124, 94, 0.35);
+                }
+                
+                .organic-button:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+                
+                .organic-spinner {
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid rgba(255, 255, 255, 0.3);
+                    border-top-color: white;
+                    border-radius: 50%;
+                    animation: spin 0.8s linear infinite;
+                    margin: 0 auto;
+                }
+                
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                
+                .organic-divider {
+                    text-align: center;
+                    margin: 2rem 0;
+                    position: relative;
+                    color: #9a9a9a;
+                    font-size: 0.875rem;
+                    font-style: italic;
+                }
+                
+                .organic-divider::before,
+                .organic-divider::after {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    width: 40%;
+                    height: 1px;
+                    background: linear-gradient(to right, transparent, rgba(139, 115, 85, 0.2), transparent);
+                }
+                
+                .organic-divider::before {
+                    left: 0;
+                }
+                
+                .organic-divider::after {
+                    right: 0;
+                }
+                
+                .organic-footer-text {
+                    text-align: center;
+                    margin-top: 2rem;
+                    color: #7a7a7a;
+                    font-size: 0.9rem;
+                }
+                
+                .organic-footer-link {
+                    color: #6a7c5e;
+                    font-weight: 600;
+                    text-decoration: none;
+                    transition: color 0.3s ease;
+                }
+                
+                .organic-footer-link:hover {
+                    color: #4a5c3e;
+                    text-decoration: underline;
+                }
+                
+                @media (max-width: 640px) {
+                    .organic-card {
+                        padding: 2.5rem 2rem;
+                    }
+                    
+                    .organic-title {
+                        font-size: 2rem;
+                    }
+                }
+            `}</style>
+
+            <div className="organic-card">
+                <Leaf className="organic-leaf-icon" strokeWidth={1.5} />
+                
+                <h1 className="organic-title">Welcome back</h1>
+                <p className="organic-subtitle">Step into your sanctuary of productivity</p>
+
+                <form onSubmit={handleSubmit}>
+                    <div className="organic-form-group">
+                        <label className="organic-label">Email Address</label>
+                        <div className="organic-input-wrapper">
+                            <input
+                                name="email"
+                                type="email"
+                                placeholder="your@email.com"
+                                required
+                                className="organic-input"
+                            />
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
-                    <p className="text-slate-400 mt-2">Sign in to continue to TaskFlow</p>
-                </div>
 
-                {/* Login Form */}
-                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-xl border border-white/10">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Email Field */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                                Email Address
-                            </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <HiOutlineMail className="h-5 w-5 text-slate-400" />
-                                </div>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    className={`w-full pl-10 pr-4 py-3 bg-white/5 border ${errors.email ? 'border-red-400' : 'border-white/10'
-                                        } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all`}
-                                    placeholder="Enter your email"
-                                />
-                            </div>
-                            {errors.email && (
-                                <p className="mt-1 text-sm text-red-400">{errors.email}</p>
-                            )}
+                    <div className="organic-form-group">
+                        <label className="organic-label">Password</label>
+                        <div className="organic-input-wrapper">
+                            <input
+                                name="password"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Enter your password"
+                                required
+                                className="organic-input"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="organic-eye-button"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
                         </div>
+                    </div>
 
-                        {/* Password Field */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                                Password
-                            </label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <HiOutlineLockClosed className="h-5 w-5 text-slate-400" />
-                                </div>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    className={`w-full pl-10 pr-4 py-3 bg-white/5 border ${errors.password ? 'border-red-400' : 'border-white/10'
-                                        } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all`}
-                                    placeholder="Enter your password"
-                                />
-                            </div>
-                            {errors.password && (
-                                <p className="mt-1 text-sm text-red-400">{errors.password}</p>
-                            )}
-                        </div>
-
-                        {/* Submit Button */}
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-3 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    <div className="organic-remember-row">
+                        <label className="organic-checkbox-label">
+                            <input type="checkbox" name="rememberMe" className="organic-checkbox" />
+                            <span>Remember me</span>
+                        </label>
+                        <a
+                            href="#"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                toast.error('Password reset not implemented yet');
+                            }}
+                            className="organic-link"
                         >
-                            {loading ? (
-                                <span className="flex items-center justify-center">
-                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Signing in...
-                                </span>
-                            ) : (
-                                'Sign In'
-                            )}
-                        </button>
-                    </form>
-
-                    {/* Sign Up Link */}
-                    <div className="mt-6 text-center">
-                        <p className="text-slate-400">
-                            Don't have an account?{' '}
-                            <Link to="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
-                                Sign up
-                            </Link>
-                        </p>
+                            Forgot password?
+                        </a>
                     </div>
-                </div>
+
+                    <button type="submit" disabled={loading} className="organic-button">
+                        {loading ? <div className="organic-spinner" /> : 'Sign In'}
+                    </button>
+                </form>
+
+                <div className="organic-divider">or continue with</div>
+
+                <p className="organic-footer-text">
+                    New to our garden?{' '}
+                    <Link to="/register" className="organic-footer-link">
+                        Create an account
+                    </Link>
+                </p>
             </div>
         </div>
     );

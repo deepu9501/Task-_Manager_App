@@ -4,9 +4,11 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 
 // Load environment variables
+console.log('🔧 Loading environment variables...');
 dotenv.config();
 
 // Connect to database
+console.log('🚀 Starting Task Manager API...');
 connectDB();
 
 const app = express();
@@ -23,6 +25,16 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
+
+// Error handling middleware (must be after routes)
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(err.statusCode || 500).json({
+        success: false,
+        message: err.message || 'Server Error',
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+});
 
 const PORT = process.env.PORT || 5000;
 
